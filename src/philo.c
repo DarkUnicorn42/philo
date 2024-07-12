@@ -11,18 +11,35 @@
 /* ************************************************************************** */
 
 #include "../include/philo.h"
-
-void	parse_arg(int ac, char **av, t_data data)
+void	parse_arg(int ac, char **av, t_data *data)
 {
-		
+	if (ac < 5 || ac > 6)
+		ft_printf("Error: number of philo, time to die, time to eat, time to sleep, [times to eat]\n");
+	data->number_of_philosophers = ft_atoi(av[1]);
+	data->time_to_die = ft_atoi(av[2]);
+	data->time_to_eat = ft_atoi(av[3]);
+	data->time_to_sleep = ft_atoi(av[4]);
+	if (ac == 6)
+		data->number_of_times_each_philosopher_must_eat = ft_atoi(av[5]);
+	else
+		data->number_of_times_each_philosopher_must_eat = -1;
+	if (data->number_of_philosophers <= 0 || data->time_to_die <= 0 || data->time_to_eat <= 0 || data->time_to_sleep <= 0)
+	{
+		ft_printf("Error: Invalid argument values.\n");
+		print_usage();
+	}
 }
 
 int	main(int ac, char **av)
 {
-	int	number_of_philosophers;
-	int	time_to_die;
-	int	time_to_sleep;
-	int	number_of_times_each_philosopher_must_eat;
+	t_data data;
+
+	parse_arg(ac, av, &data);
+	if (data.number_of_times_each_philosopher_must_eat != -1)
+		printf("Number of times each philosopher must eat: %d\n", data.number_of_times_each_philosopher_must_eat);
+	else
+		printf("Number of times each philosopher must eat: Not specified\n");
+	return (0);
 }
 
 /*

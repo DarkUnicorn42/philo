@@ -2,7 +2,7 @@
 NAME = philo
 
 # Source files
-SOURCES =	src/pipex.c \
+SOURCES =	src/philo.c \
 		src/utils.c
 
 # Object files
