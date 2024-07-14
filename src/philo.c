@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "../include/philo.h"
+
 void	parse_arg(int ac, char **av, t_data *data)
 {
 	if (ac < 5 || ac > 6)

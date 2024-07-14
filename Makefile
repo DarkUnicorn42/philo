@@ -3,21 +3,17 @@ NAME = philo
 
 # Source files
 SOURCES =	src/philo.c \
-		src/utils.c
+			src/utils.c \
 
 # Object files
 OBJECTS = $(SOURCES:.c=.o)
 
 # Compiler and flags
 CC = cc
-CFLAGS = -Wall -Werror -Wextra -Iincludes
-
-# Paths
-LIBFT_DIR = libft
-LIBFT = $(LIBFT_DIR)/libft.a
+CFLAGS = -Wall -Werror -Wextra
 
 # Target for all
-all: $(LIBFT) $(NAME)
+all: $(NAME)
 
 # Target for the final executable
 $(NAME): $(OBJECTS)
@@ -27,10 +23,6 @@ $(NAME): $(OBJECTS)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Rule to build the libft library
-$(LIBFT):
-	$(MAKE) -C $(LIBFT_DIR)
-
 # Clean object files
 clean:
 	@rm -f $(OBJECTS)
@@ -39,7 +31,6 @@ clean:
 # Full clean, including the executable and libft
 fclean: clean
 	@rm -f $(NAME)
-	@$(MAKE) -C $(LIBFT_DIR) fclean
 
 # Rebuild everything
 re: fclean all

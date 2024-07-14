@@ -17,7 +17,15 @@
 # include <unistd.h>
 # include <fcntl.h>
 # include <stdio.h>
-# include "../libft/libft.h"
+# include <pthread.h>
+
+/* Allowed Functions:
+memset, printf, malloc, free, write, usleep, gettimeofday, 
+pthread_create, pthread_detach, pthread_join, 
+pthread_mutex_init, pthread_mutex_destroy, pthread_mutex_lock, pthread_mutex_unlock
+
+https://42-cursus.gitbook.io/guide/rank-03/philosophers/functions-used
+*/
 
 /*
 ◦ number_of_philosophers: The number of philosophers and also the number
@@ -36,10 +44,12 @@ typedef struct s_data
 {
 	int	number_of_philosophers;
 	int	time_to_die;
+	int	time_to_eat;
 	int	time_to_sleep;
 	int	number_of_times_each_philosopher_must_eat;
 } t_data
 
-
+int	ft_atoi(const char *nptr)
+void	parse_arg(int ac, char **av, t_data *data);
 
 #endif
