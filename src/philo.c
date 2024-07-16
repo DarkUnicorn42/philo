@@ -15,7 +15,7 @@
 void	parse_arg(int ac, char **av, t_data *data)
 {
 	if (ac < 5 || ac > 6)
-		ft_printf("Error: number of philo, time to die, time to eat, time to sleep, [times to eat]\n");
+		printf("Error: number of philo, time to die, time to eat, time to sleep, [times to eat]\n");
 	data->number_of_philosophers = ft_atoi(av[1]);
 	data->time_to_die = ft_atoi(av[2]);
 	data->time_to_eat = ft_atoi(av[3]);
@@ -25,22 +25,78 @@ void	parse_arg(int ac, char **av, t_data *data)
 	else
 		data->number_of_times_each_philosopher_must_eat = -1;
 	if (data->number_of_philosophers <= 0 || data->time_to_die <= 0 || data->time_to_eat <= 0 || data->time_to_sleep <= 0)
-	{
-		ft_printf("Error: Invalid argument values.\n");
-		print_usage();
-	}
+		printf("Error: Invalid argument values.\n"); 
 }
 
-int	main(int ac, char **av)
+void *philosopher_life(void *arg)
 {
-	t_data data;
+    t_philosopher *philo = (t_philosopher *)arg;
+    t_data *data = philo->data;
 
-	parse_arg(ac, av, &data);
-	if (data.number_of_times_each_philosopher_must_eat != -1)
-		printf("Number of times each philosopher must eat: %d\n", data.number_of_times_each_philosopher_must_eat);
-	else
-		printf("Number of times each philosopher must eat: Not specified\n");
-	return (0);
+    while (1)
+    {
+        // Thinking
+        print_status(philo, "is thinking");
+
+        // Take forks
+        pthread_mutex_lock(&data->forks[philo->id]);
+        print_status(philo, "has taken a fork");
+        pthread_mutex_lock(&data->forks[(philo->id + 1) % data->number_of_philosophers]);
+        print_status(philo, "has taken a fork");
+
+        // Eating
+        print_status(philo, "is eating");
+        philo->last_meal_time = current_timestamp();
+        usleep(data->time_to_eat * 1000);
+        philo->times_eaten++;
+
+        // Put down forks
+        pthread_mutex_unlock(&data->forks[(philo->id + 1) % data->number_of_philosophers]);
+        pthread_mutex_unlock(&data->forks[philo->id]);
+
+        // Sleeping
+        print_status(philo, "is sleeping");
+        usleep(data->time_to_sleep * 1000);
+    }
+    return (NULL);
+}
+
+int main(int ac, char **av)
+{
+    t_data data;
+    t_philosopher *philos;
+    int i;
+
+    parse_arg(ac, av, &data);
+    data.start_time = current_timestamp();
+    data.forks = malloc(sizeof(pthread_mutex_t) * data.number_of_philosophers);
+	i = 0;
+    while (i < data.number_of_philosophers)
+	{
+        pthread_mutex_init(&data.forks[i], NULL);
+		i++;
+	}
+	pthread_mutex_init(&data.print_lock, NULL);
+    philos = malloc(sizeof(t_philosopher) * data.number_of_philosophers);
+	i = 0;
+    while (i < data.number_of_philosophers)
+    {
+        philos[i].id = i;  // Assign ID to each philosopher
+        philos[i].times_eaten = 0;  // Initialize times eaten
+        philos[i].last_meal_time = data.start_time;  // Initialize last meal time
+        philos[i].data = &data;  // Link to shared data
+        pthread_create(&philos[i].thread, NULL, philosopher_life, &philos[i]);  // Create philosopher thread
+		i++;
+    }
+    for (i = 0; i < data.number_of_philosophers; i++)
+        pthread_join(philos[i].thread, NULL);  // Wait for all philosopher threads to finish
+
+    for (i = 0; i < data.number_of_philosophers; i++)
+        pthread_mutex_destroy(&data.forks[i]);
+    pthread_mutex_destroy(&data.print_lock);
+    free(data.forks);
+    free(philos);
+    return (0);
 }
 
 /*

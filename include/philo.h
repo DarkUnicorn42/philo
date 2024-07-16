@@ -18,6 +18,7 @@
 # include <fcntl.h>
 # include <stdio.h>
 # include <pthread.h>
+# include <sys/time.h>
 
 /* Allowed Functions:
 memset, printf, malloc, free, write, usleep, gettimeofday, 
@@ -40,16 +41,35 @@ philosophers have eaten at least number_of_times_each_philosopher_must_eat
 times, the simulation stops. If not specified, the simulation stops when a
 philosopher dies.
 */
+
 typedef struct s_data
 {
-	int	number_of_philosophers;
-	int	time_to_die;
-	int	time_to_eat;
-	int	time_to_sleep;
-	int	number_of_times_each_philosopher_must_eat;
-} t_data
+    int number_of_philosophers;
+    int time_to_die;
+    int time_to_eat;
+    int time_to_sleep;
+    int number_of_times_each_philosopher_must_eat;
+    pthread_mutex_t *forks;
+    pthread_mutex_t print_lock;
+    long long start_time;
+} t_data;
 
-int	ft_atoi(const char *nptr)
+typedef struct s_philosopher
+{
+    int id;
+    int times_eaten;
+    long long last_meal_time;
+    t_data *data;
+    pthread_t thread;
+} t_philosopher;
+
+/* Philo */
 void	parse_arg(int ac, char **av, t_data *data);
+
+
+/* Utils */
+long long current_timestamp(void);
+int	ft_atoi(const char *nptr);
+void print_status(t_philosopher *philo, char *status);
 
 #endif

@@ -1,6 +1,21 @@
 
 #include "../include/philo.h"
 
+long long current_timestamp(void)
+{
+    struct timeval tv;
+	
+    gettimeofday(&tv, NULL);
+    return (tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
+void print_status(t_philosopher *philo, char *status)
+{
+    pthread_mutex_lock(&philo->data->print_lock);
+    printf("%lld %d %s\n", current_timestamp() - philo->data->start_time, philo->id, status);
+    pthread_mutex_unlock(&philo->data->print_lock);
+}
+
 int ft_atoi(const char *nptr)
 {
 	int	i;
