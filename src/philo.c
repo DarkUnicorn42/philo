@@ -24,8 +24,11 @@ void	parse_arg(int ac, char **av, t_data *data)
 		data->number_of_times_each_philosopher_must_eat = ft_atoi(av[5]);
 	else
 		data->number_of_times_each_philosopher_must_eat = -1;
-	if (data->number_of_philosophers <= 0 || data->time_to_die <= 0 || data->time_to_eat <= 0 || data->time_to_sleep <= 0)
-		printf("Error: Invalid argument values.\n"); 
+    if (data->number_of_philosophers <= 0 || data->time_to_die <= 0 || data->time_to_eat <= 0 || data->time_to_sleep <= 0)
+    {
+        printf("Error: Invalid argument values.\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void *philosopher_life(void *arg)
@@ -61,44 +64,54 @@ void *philosopher_life(void *arg)
     return (NULL);
 }
 
+void monitor_philosophers(t_philosopher *philos, t_data *data)
+{
+    while (1)
+    {
+        for (int i = 0; i < data->number_of_philosophers; i++)
+        {
+            if ((current_timestamp() - philos[i].last_meal_time) > data->time_to_die)
+            {
+                print_status(&philos[i], "died");
+                return;
+            }
+        }
+        usleep(1000);
+    }
+}
+
 int main(int ac, char **av)
 {
     t_data data;
     t_philosopher *philos;
     int i;
 
-    parse_arg(ac, av, &data);
-    data.start_time = current_timestamp();
-    data.forks = malloc(sizeof(pthread_mutex_t) * data.number_of_philosophers);
-	i = 0;
-    while (i < data.number_of_philosophers)
-	{
-        pthread_mutex_init(&data.forks[i], NULL);
-		i++;
-	}
-	pthread_mutex_init(&data.print_lock, NULL);
-    philos = malloc(sizeof(t_philosopher) * data.number_of_philosophers);
-	i = 0;
-    while (i < data.number_of_philosophers)
+    parse_arg(ac, av, &data);  // Step 2: Parse arguments and initialize data structure
+    data.start_time = current_timestamp();  // Initialize start time
+    data.forks = malloc(sizeof(pthread_mutex_t) * data.number_of_philosophers);  // Allocate memory for forks
+    for (i = 0; i < data.number_of_philosophers; i++)
+        pthread_mutex_init(&data.forks[i], NULL);  // Initialize each fork mutex
+    pthread_mutex_init(&data.print_lock, NULL);  // Initialize print lock mutex
+
+    philos = malloc(sizeof(t_philosopher) * data.number_of_philosophers);  // Allocate memory for philosophers
+    for (i = 0; i < data.number_of_philosophers; i++)
     {
         philos[i].id = i;  // Assign ID to each philosopher
         philos[i].times_eaten = 0;  // Initialize times eaten
         philos[i].last_meal_time = data.start_time;  // Initialize last meal time
         philos[i].data = &data;  // Link to shared data
         pthread_create(&philos[i].thread, NULL, philosopher_life, &philos[i]);  // Create philosopher thread
-		i++;
     }
-    for (i = 0; i < data.number_of_philosophers; i++)
-        pthread_join(philos[i].thread, NULL);  // Wait for all philosopher threads to finish
+
+    monitor_philosophers(philos, &data);  // Monitor philosophers for death
 
     for (i = 0; i < data.number_of_philosophers; i++)
-        pthread_mutex_destroy(&data.forks[i]);
-    pthread_mutex_destroy(&data.print_lock);
-    free(data.forks);
-    free(philos);
+        pthread_mutex_destroy(&data.forks[i]);  // Destroy fork mutexes
+    pthread_mutex_destroy(&data.print_lock);  // Destroy print lock mutex
+    free(data.forks);  // Free allocated memory for forks
+    free(philos);  // Free allocated memory for philosophers
     return (0);
 }
-
 /*
 Your(s) program(s) should take the following arguments:
 number_of_philosophers time_to_die time_to_eat time_to_sleep
