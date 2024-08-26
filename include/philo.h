@@ -52,6 +52,7 @@ typedef struct s_data
     pthread_mutex_t *forks;
     pthread_mutex_t print_lock;
     long long start_time;
+    int simulation_end;
 } t_data;
 
 typedef struct s_philosopher
