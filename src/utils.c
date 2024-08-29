@@ -10,18 +10,17 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-
 #include "../include/philo.h"
 
-long long current_timestamp(void)
+long long	current_timestamp(void)
 {
-    struct timeval tv;
+    struct timeval	tv;
 	
     gettimeofday(&tv, NULL);
     return (tv.tv_sec * 1000 + tv.tv_usec / 1000);
 }
 
-void print_status(t_philosopher *philo, char *status)
+void	print_status(t_philosopher *philo, char *status)
 {
     pthread_mutex_lock(&philo->data->print_lock);
     printf("%lld %d %s\n", current_timestamp() - philo->data->start_time, philo->id, status);
@@ -52,4 +51,11 @@ int ft_atoi(const char *nptr)
 		i++;
 	}
 	return (res *= sign);
+}
+
+void	handle_single_philosopher(t_data *data)
+{
+    printf("%lld 0 is thinking\n", current_timestamp() - data->start_time);
+    usleep(data->time_to_die * 1000);
+    printf("%lld 0 died\n", current_timestamp() - data->start_time);
 }

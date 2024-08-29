@@ -17,7 +17,7 @@ all: $(NAME)
 
 # Target for the final executable
 $(NAME): $(OBJECTS)
-	$(CC) $(CFLAGS) -o $(NAME) $(OBJECTS) $(LIBFT)
+	$(CC) $(CFLAGS) -o $(NAME) $(OBJECTS)
 
 # Rule to build object files
 %.o: %.c
@@ -26,7 +26,6 @@ $(NAME): $(OBJECTS)
 # Clean object files
 clean:
 	@rm -f $(OBJECTS)
-	@$(MAKE) -C $(LIBFT_DIR) clean
 	
 # Full clean, including the executable and libft
 fclean: clean

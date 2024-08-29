@@ -53,7 +53,7 @@ typedef struct s_data
     pthread_mutex_t print_lock;
     long long start_time;
     int simulation_end;
-} t_data;
+}   t_data;
 
 typedef struct s_philosopher
 {
@@ -62,15 +62,18 @@ typedef struct s_philosopher
     long long last_meal_time;
     t_data *data;
     pthread_t thread;
-} t_philosopher;
+}   t_philosopher;
 
 /* Philo */
 void	parse_arg(int ac, char **av, t_data *data);
-
+void    cleanup(t_data *data, t_philosopher *philos);
+void    initialize_data(t_data *data, int ac, char **av);
+t_philosopher   *create_philosophers(t_data *data);
 
 /* Utils */
-long long current_timestamp(void);
-int	ft_atoi(const char *nptr);
-void print_status(t_philosopher *philo, char *status);
+long long   current_timestamp(void);
+int     ft_atoi(const char *nptr);
+void    print_status(t_philosopher *philo, char *status);
+void    handle_single_philosopher(t_data *data);
 
 #endif

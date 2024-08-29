@@ -24,8 +24,15 @@ void	parse_arg(int ac, char **av, t_data *data)
 	data->time_to_eat = ft_atoi(av[3]);
 	data->time_to_sleep = ft_atoi(av[4]);
 	if (ac == 6)
+    {
 		data->number_of_times_each_philosopher_must_eat = ft_atoi(av[5]);
-	else
+        if (data->number_of_times_each_philosopher_must_eat <= 0)
+        {
+            printf("Error: Invalid argument values.\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+    else
 		data->number_of_times_each_philosopher_must_eat = -1;
     if (data->number_of_philosophers <= 0 || data->time_to_die <= 0 || data->time_to_eat <= 0 || data->time_to_sleep <= 0)
     {
@@ -43,28 +50,21 @@ void    *philosopher_life(void *arg)
     {
         if (data->simulation_end)
             break;
-        // Thinking
         print_status(philo, "is thinking");
         // Take forks
         pthread_mutex_lock(&data->forks[philo->id]);
-        //print_status(philo, "has taken a fork");
         pthread_mutex_lock(&data->forks[(philo->id + 1) % data->number_of_philosophers]);
-       // print_status(philo, "has taken a fork");
         if (data->simulation_end)
             break;
-        // Eating
         print_status(philo, "is eating");
         philo->last_meal_time = current_timestamp();
         usleep(data->time_to_eat * 1000);
         philo->times_eaten++;
-
         // Put down forks
         pthread_mutex_unlock(&data->forks[(philo->id + 1) % data->number_of_philosophers]);
         pthread_mutex_unlock(&data->forks[philo->id]);
-
         if (data->simulation_end)
             break;
-
         // Sleeping
         print_status(philo, "is sleeping");
         usleep(data->time_to_sleep * 1000);
@@ -80,7 +80,8 @@ void monitor_philosophers(t_philosopher *philos, t_data *data)
     while (1)
     {
         all_ate_enough = 1;
-        for (i = 0; i < data->number_of_philosophers; i++)
+        i = 0;
+        while (i < data->number_of_philosophers)
         {
             if ((current_timestamp() - philos[i].last_meal_time) > data->time_to_die)
             {
@@ -93,56 +94,105 @@ void monitor_philosophers(t_philosopher *philos, t_data *data)
             {
                 all_ate_enough = 0;
             }
+            i++;
         }
-
         if (data->number_of_times_each_philosopher_must_eat != -1 && all_ate_enough)
         {
             print_status(&philos[0], "All philosophers have eaten enough times");
             data->simulation_end = 1;
             return;
         }
-
-        usleep(1000); // Check every millisecond
+        usleep(1000);
     }
+}
+
+void initialize_data(t_data *data, int ac, char **av)
+{
+    parse_arg(ac, av, data);
+    data->start_time = current_timestamp();
+    data->simulation_end = 0; // Initialize the termination flag
+
+    data->forks = malloc(sizeof(pthread_mutex_t) * data->number_of_philosophers);
+    if (!data->forks)
+    {
+        printf("Error: Memory allocation failed for forks.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    int i = 0;
+    while (i < data->number_of_philosophers)
+    {
+        pthread_mutex_init(&data->forks[i], NULL);
+        i++;
+    }
+    pthread_mutex_init(&data->print_lock, NULL);
+}
+
+t_philosopher *create_philosophers(t_data *data)
+{
+    t_philosopher *philos = malloc(sizeof(t_philosopher) * data->number_of_philosophers);
+    if (!philos)
+    {
+        printf("Error: Memory allocation failed for philosophers.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    int i = 0;
+    while (i < data->number_of_philosophers)
+    {
+        philos[i].id = i;  // Assign ID to each philosopher
+        philos[i].times_eaten = 0;  // Initialize times eaten
+        philos[i].last_meal_time = data->start_time;  // Initialize last meal time
+        philos[i].data = data;  // Link to shared data
+        pthread_create(&philos[i].thread, NULL, philosopher_life, &philos[i]);  // Create philosopher thread
+        i++;
+    }
+
+    return philos;
+}
+
+void cleanup(t_data *data, t_philosopher *philos)
+{
+    int i = 0;
+    while (i < data->number_of_philosophers)
+    {
+        pthread_join(philos[i].thread, NULL);
+        pthread_mutex_destroy(&data->forks[i]);
+        i++;
+    }
+    pthread_mutex_destroy(&data->print_lock);
+    free(data->forks);
+    free(philos);
 }
 
 int main(int ac, char **av)
 {
     t_data data;
     t_philosopher *philos;
-    int i;
 
-    parse_arg(ac, av, &data);
-    data.start_time = current_timestamp();
-    data.simulation_end = 0;  // Initialize the termination flag
-    data.forks = malloc(sizeof(pthread_mutex_t) * data.number_of_philosophers);
-    for (i = 0; i < data.number_of_philosophers; i++)
-        pthread_mutex_init(&data.forks[i], NULL);
-    pthread_mutex_init(&data.print_lock, NULL);
+    // Initialize data and resources
+    initialize_data(&data, ac, av);
 
-    philos = malloc(sizeof(t_philosopher) * data.number_of_philosophers);
-    for (i = 0; i < data.number_of_philosophers; i++)
+    // Handle single philosopher case
+    if (data.number_of_philosophers == 1)
     {
-        philos[i].id = i;
-        philos[i].times_eaten = 0;
-        philos[i].last_meal_time = data.start_time;
-        philos[i].data = &data;
-        pthread_create(&philos[i].thread, NULL, philosopher_life, &philos[i]);
+        handle_single_philosopher(&data);
+        free(data.forks); // Free allocated memory for forks
+        return (0);
     }
 
+    // Create philosopher threads
+    philos = create_philosophers(&data);
+
+    // Monitor philosophers
     monitor_philosophers(philos, &data);
 
-    // Wait for all threads to finish
-    for (i = 0; i < data.number_of_philosophers; i++)
-        pthread_join(philos[i].thread, NULL);
+    // Cleanup resources
+    cleanup(&data, philos);
 
-    for (i = 0; i < data.number_of_philosophers; i++)
-        pthread_mutex_destroy(&data.forks[i]);
-    pthread_mutex_destroy(&data.print_lock);
-    free(data.forks);
-    free(philos);
     return (0);
 }
+
 
 /*
 Your(s) program(s) should take the following arguments:
