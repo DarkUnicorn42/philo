@@ -59,3 +59,30 @@ void	handle_single_philosopher(t_data *data)
     usleep(data->time_to_die * 1000);
     printf("%lld 0 died\n", current_timestamp() - data->start_time);
 }
+
+// void cleanup(t_data *data, t_philosopher *philos)
+// {
+//     int i = 0;
+//     while (i < data->number_of_philosophers)
+//     {
+//         pthread_join(philos[i].thread, NULL);
+//         pthread_mutex_destroy(&data->forks[i]);
+//         i++;
+//     }
+//     pthread_mutex_destroy(&data->print_lock);
+//     free(data->forks);
+//     free(philos);
+// }
+
+void cleanup(t_data *data, t_philosopher *philos) {
+    for (int i = 0; i < data->number_of_philosophers; i++) {
+        pthread_join(philos[i].thread, NULL);  // Ensure all threads have finished
+    }
+    // Then proceed to destroy mutexes and free memory
+    for (int i = 0; i < data->number_of_philosophers; i++) {
+        pthread_mutex_destroy(&data->forks[i]);
+    }
+    pthread_mutex_destroy(&data->print_lock);
+    free(data->forks);
+    free(philos);
+}

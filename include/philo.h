@@ -65,8 +65,12 @@ typedef struct s_philosopher
 }   t_philosopher;
 
 /* Philo */
+int take_forks(t_philosopher *philo);
+void eat(t_philosopher *philo);
+void sleep_and_think(t_philosopher *philo);
+void *philosopher_life(void *arg);
+void monitor_philosophers(t_philosopher *philos, t_data *data);
 void	parse_arg(int ac, char **av, t_data *data);
-void    cleanup(t_data *data, t_philosopher *philos);
 void    initialize_data(t_data *data, int ac, char **av);
 t_philosopher   *create_philosophers(t_data *data);
 
@@ -75,5 +79,6 @@ long long   current_timestamp(void);
 int     ft_atoi(const char *nptr);
 void    print_status(t_philosopher *philo, char *status);
 void    handle_single_philosopher(t_data *data);
+void    cleanup(t_data *data, t_philosopher *philos);
 
 #endif

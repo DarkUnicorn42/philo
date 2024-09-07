@@ -41,67 +41,112 @@ void	parse_arg(int ac, char **av, t_data *data)
     }
 }
 
-void    *philosopher_life(void *arg)
-{
-    t_philosopher *philo = (t_philosopher *)arg;
+int take_forks(t_philosopher *philo) {
     t_data *data = philo->data;
 
-    while (1)
-    {
-        if (data->simulation_end)
-            break;
-        print_status(philo, "is thinking");
-        // Take forks
-        pthread_mutex_lock(&data->forks[philo->id]);
-        pthread_mutex_lock(&data->forks[(philo->id + 1) % data->number_of_philosophers]);
-        if (data->simulation_end)
-            break;
-        print_status(philo, "is eating");
-        philo->last_meal_time = current_timestamp();
-        usleep(data->time_to_eat * 1000);
-        philo->times_eaten++;
-        // Put down forks
-        pthread_mutex_unlock(&data->forks[(philo->id + 1) % data->number_of_philosophers]);
+    pthread_mutex_lock(&data->forks[philo->id]);
+    if (data->simulation_end) {
         pthread_mutex_unlock(&data->forks[philo->id]);
-        if (data->simulation_end)
-            break;
-        // Sleeping
-        print_status(philo, "is sleeping");
-        usleep(data->time_to_sleep * 1000);
+        return 0; // Indicate unsuccessful fork acquisition due to end of simulation
     }
-    return (NULL);
+    print_status(philo, "has taken a fork");
+    pthread_mutex_lock(&data->forks[(philo->id + 1) % data->number_of_philosophers]);
+    if (data->simulation_end) {
+        pthread_mutex_unlock(&data->forks[philo->id]);
+        pthread_mutex_unlock(&data->forks[(philo->id + 1) % data->number_of_philosophers]);
+        return 0;
+    }
+    print_status(philo, "has taken a fork");
+
+    return 1; // Successfully acquired both forks
 }
 
-void monitor_philosophers(t_philosopher *philos, t_data *data)
+void eat(t_philosopher *philo) {
+    print_status(philo, "is eating");
+    philo->last_meal_time = current_timestamp();
+    usleep(philo->data->time_to_eat * 1000);
+    philo->times_eaten++;
+
+    // Release forks
+    pthread_mutex_unlock(&philo->data->forks[philo->id]);
+    pthread_mutex_unlock(&philo->data->forks[(philo->id + 1) % philo->data->number_of_philosophers]);
+}
+
+void sleep_and_think(t_philosopher *philo) {
+    print_status(philo, "is sleeping");
+    usleep(philo->data->time_to_sleep * 1000);
+    print_status(philo, "is thinking");
+}
+
+void *philosopher_life(void *arg)
 {
-    int i;
+    t_philosopher *philo = (t_philosopher *)arg;
+
+    while (!philo->data->simulation_end) {
+        // if (philo->data->simulation_end) {
+        //     break;
+        // }
+
+        // Try to take forks
+        if (!take_forks(philo)) {
+            continue;  // If unable to take forks, check the loop condition again
+        }
+
+        // Eating
+        
+        if (!philo->data->simulation_end) {
+            eat(philo);
+        }
+
+        // Sleeping and then thinking
+        
+        if (!philo->data->simulation_end) {
+            sleep_and_think(philo);
+        }
+    }
+    return NULL;
+}
+
+
+void monitor_philosophers(t_philosopher *philos, t_data *data) {
     int all_ate_enough;
+    int i;
 
     while (1)
     {
         all_ate_enough = 1;
-        i = 0;
+        i = 0;  // Initialize loop counter before the while loop begins
+
+        // Loop over all philosophers to check their status
         while (i < data->number_of_philosophers)
         {
+            // Check if a philosopher has surpassed the time_to_die threshold
             if ((current_timestamp() - philos[i].last_meal_time) > data->time_to_die)
             {
-                print_status(&philos[i], "died");
-                data->simulation_end = 1;
+                pthread_mutex_lock(&data->print_lock);
+                printf("%lld %d died\n", current_timestamp() - data->start_time, philos[i].id);
+                data->simulation_end = 1; //in mutex or not?
+                pthread_mutex_unlock(&data->print_lock);
                 return;
             }
+            // Check if not all philosophers have eaten the minimum required times
             if (data->number_of_times_each_philosopher_must_eat != -1 &&
-                philos[i].times_eaten < data->number_of_times_each_philosopher_must_eat)
-            {
+                philos[i].times_eaten < data->number_of_times_each_philosopher_must_eat) {
                 all_ate_enough = 0;
             }
             i++;
         }
-        if (data->number_of_times_each_philosopher_must_eat != -1 && all_ate_enough)
-        {
-            print_status(&philos[0], "All philosophers have eaten enough times");
+
+        // If all philosophers have eaten the required number of times, stop the simulation
+        if (data->number_of_times_each_philosopher_must_eat != -1 && all_ate_enough) {
+            pthread_mutex_lock(&data->print_lock);
+            printf("%lld All philosophers have eaten enough times\n", current_timestamp() - data->start_time);
             data->simulation_end = 1;
+            pthread_mutex_unlock(&data->print_lock);
+
             return;
         }
+
         usleep(1000);
     }
 }
@@ -151,45 +196,21 @@ t_philosopher *create_philosophers(t_data *data)
     return philos;
 }
 
-void cleanup(t_data *data, t_philosopher *philos)
-{
-    int i = 0;
-    while (i < data->number_of_philosophers)
-    {
-        pthread_join(philos[i].thread, NULL);
-        pthread_mutex_destroy(&data->forks[i]);
-        i++;
-    }
-    pthread_mutex_destroy(&data->print_lock);
-    free(data->forks);
-    free(philos);
-}
-
 int main(int ac, char **av)
 {
     t_data data;
     t_philosopher *philos;
-
-    // Initialize data and resources
+ 
     initialize_data(&data, ac, av);
-
-    // Handle single philosopher case
     if (data.number_of_philosophers == 1)
     {
         handle_single_philosopher(&data);
-        free(data.forks); // Free allocated memory for forks
+        free(data.forks);
         return (0);
     }
-
-    // Create philosopher threads
     philos = create_philosophers(&data);
-
-    // Monitor philosophers
     monitor_philosophers(philos, &data);
-
-    // Cleanup resources
     cleanup(&data, philos);
-
     return (0);
 }
 
