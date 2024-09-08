@@ -93,6 +93,17 @@ void *philosopher_routine(void *arg)
         if (philo->sim->is_optional_arg_present && philo->times_eaten >= philo->sim->number_of_times_each_philosopher_must_eat)
         {
             release_forks(philo);
+            
+            // Increment the finished philosophers count
+            pthread_mutex_lock(&philo->sim->death_mutex);
+            philo->sim->finished_philosophers++;
+            if (philo->sim->finished_philosophers == philo->sim->number_of_philosophers)
+            {
+                printf("Everyone ate enough\n");
+                philo->sim->death_flag = 1;  // Set death_flag to stop the simulation if all have finished
+            }
+            pthread_mutex_unlock(&philo->sim->death_mutex);
+
             pthread_exit(NULL);  // Exit if the philosopher has eaten enough times
         }
 
@@ -118,8 +129,6 @@ void *philosopher_routine(void *arg)
 
     return NULL;
 }
-
-
 
 void start_simulation(t_philosopher *philosophers, t_simulation *sim)
 {

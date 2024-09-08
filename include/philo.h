@@ -37,6 +37,7 @@ typedef struct s_simulation
     pthread_mutex_t log_mutex;      // Mutex for synchronized logging
     pthread_mutex_t death_mutex;    // Mutex to protect the death flag
     int death_flag;                 // 1 if a philosopher has died, 0 otherwise
+    int finished_philosophers; 
 } t_simulation;
 
 
