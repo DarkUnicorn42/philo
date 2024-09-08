@@ -50,9 +50,10 @@ typedef struct s_philosopher
     t_simulation *sim;
 } t_philosopher;
 
-
-
-
+void print_action(t_philosopher *philo, const char *action);
+void pick_up_forks(t_philosopher *philo);
+void release_forks(t_philosopher *philo);
+int check_death(t_philosopher *philo);
 
 // Function prototypes
 long current_time_in_ms();  
