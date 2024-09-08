@@ -12,19 +12,11 @@
 
 #include "../include/philo.h"
 
-long long	current_timestamp(void)
+long current_time_in_ms()
 {
-    struct timeval	tv;
-	
-    gettimeofday(&tv, NULL);
-    return (tv.tv_sec * 1000 + tv.tv_usec / 1000);
-}
-
-void	print_status(t_philosopher *philo, char *status)
-{
-    pthread_mutex_lock(&philo->data->print_lock);
-    printf("%lld %d %s\n", current_timestamp() - philo->data->start_time, philo->id, status);
-    pthread_mutex_unlock(&philo->data->print_lock);
+    struct timeval time;
+    gettimeofday(&time, NULL);  // Get current time
+    return (time.tv_sec * 1000) + (time.tv_usec / 1000);  // Convert to milliseconds
 }
 
 int ft_atoi(const char *nptr)
@@ -53,36 +45,90 @@ int ft_atoi(const char *nptr)
 	return (res *= sign);
 }
 
-void	handle_single_philosopher(t_data *data)
+void print_error(char *message)
 {
-    printf("%lld 0 is thinking\n", current_timestamp() - data->start_time);
-    usleep(data->time_to_die * 1000);
-    printf("%lld 0 died\n", current_timestamp() - data->start_time);
+    printf("Error: %s\n", message);
+    exit(EXIT_FAILURE);
 }
 
-// void cleanup(t_data *data, t_philosopher *philos)
-// {
-//     int i = 0;
-//     while (i < data->number_of_philosophers)
-//     {
-//         pthread_join(philos[i].thread, NULL);
-//         pthread_mutex_destroy(&data->forks[i]);
-//         i++;
-//     }
-//     pthread_mutex_destroy(&data->print_lock);
-//     free(data->forks);
-//     free(philos);
-// }
+void parse_arguments(int argc, char **argv, t_simulation *sim)
+{
+    if (argc < 5 || argc > 6)  // We expect either 4 or 5 arguments
+        print_error("Invalid number of arguments");
 
-void cleanup(t_data *data, t_philosopher *philos) {
-    for (int i = 0; i < data->number_of_philosophers; i++) {
-        pthread_join(philos[i].thread, NULL);  // Ensure all threads have finished
+    sim->number_of_philosophers = ft_atoi(argv[1]);
+    sim->time_to_die = ft_atoi(argv[2]);
+    sim->time_to_eat = ft_atoi(argv[3]);
+    sim->time_to_sleep = ft_atoi(argv[4]);
+
+    if (argc == 6)
+    {
+        sim->number_of_times_each_philosopher_must_eat = ft_atoi(argv[5]);
+        sim->is_optional_arg_present = 1;
     }
-    // Then proceed to destroy mutexes and free memory
-    for (int i = 0; i < data->number_of_philosophers; i++) {
-        pthread_mutex_destroy(&data->forks[i]);
+    else
+    {
+        sim->is_optional_arg_present = 0;
     }
-    pthread_mutex_destroy(&data->print_lock);
-    free(data->forks);
-    free(philos);
+
+    // Error handling for invalid arguments (e.g., negative or zero values)
+    if (sim->number_of_philosophers <= 0 || sim->time_to_die <= 0 ||
+        sim->time_to_eat <= 0 || sim->time_to_sleep <= 0)
+    {
+        print_error("Arguments must be positive integers");
+    }
+
+    if (sim->is_optional_arg_present && sim->number_of_times_each_philosopher_must_eat <= 0)
+    {
+        print_error("Optional argument must be a positive integer");
+    }
+}
+
+void init_forks(t_simulation *sim)
+{
+    sim->forks = malloc(sizeof(pthread_mutex_t) * sim->number_of_philosophers);
+    if (!sim->forks)
+        print_error("Failed to allocate memory for forks");
+
+    for (int i = 0; i < sim->number_of_philosophers; i++)
+    {
+        if (pthread_mutex_init(&sim->forks[i], NULL) != 0)
+            print_error("Failed to initialize fork mutex");
+    }
+
+    // Initialize the log mutex
+    if (pthread_mutex_init(&sim->log_mutex, NULL) != 0)
+        print_error("Failed to initialize log mutex");
+
+    // Initialize the death mutex and set the death flag to 0 (no one has died yet)
+    if (pthread_mutex_init(&sim->death_mutex, NULL) != 0)
+        print_error("Failed to initialize death mutex");
+
+    sim->death_flag = 0;
+}
+
+void cleanup_forks(t_simulation *sim)
+{
+    for (int i = 0; i < sim->number_of_philosophers; i++)
+        pthread_mutex_destroy(&sim->forks[i]);
+
+    free(sim->forks);
+
+    // Destroy the log mutex and death mutex
+    pthread_mutex_destroy(&sim->log_mutex);
+    pthread_mutex_destroy(&sim->death_mutex);
+}
+
+
+void init_philosophers(t_philosopher *philosophers, t_simulation *sim)
+{
+    for (int i = 0; i < sim->number_of_philosophers; i++)
+    {
+        philosophers[i].id = i + 1;  // Philosopher IDs are 1-based
+        philosophers[i].times_eaten = 0;
+        philosophers[i].last_meal_time = current_time_in_ms();
+        philosophers[i].left_fork = &sim->forks[i];
+        philosophers[i].right_fork = &sim->forks[(i + 1) % sim->number_of_philosophers];  // Circular seating
+        philosophers[i].sim = sim;
+    }
 }
