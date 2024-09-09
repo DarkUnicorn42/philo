@@ -125,3 +125,13 @@ void init_philosophers(t_philosopher *philosophers, t_simulation *sim)
         philosophers[i].sim = sim;
     }
 }
+
+void handle_single_philosopher(t_philosopher *philo)
+{
+    print_action(philo, "is thinking");
+    pthread_mutex_lock(philo->left_fork);
+    print_action(philo, "has taken a fork");
+    usleep(philo->sim->time_to_die * 1000);
+    print_action(philo, "died");
+    pthread_mutex_unlock(philo->left_fork);
+}

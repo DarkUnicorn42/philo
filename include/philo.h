@@ -36,6 +36,7 @@ typedef struct s_simulation
     pthread_mutex_t *forks;
     pthread_mutex_t log_mutex;      // Mutex for synchronized logging
     pthread_mutex_t death_mutex;    // Mutex to protect the death flag
+    pthread_mutex_t meal_mutex;
     int death_flag;                 // 1 if a philosopher has died, 0 otherwise
     int finished_philosophers; 
 } t_simulation;
@@ -51,6 +52,7 @@ typedef struct s_philosopher
     t_simulation *sim;
 } t_philosopher;
 
+void handle_single_philosopher(t_philosopher *philo);
 void print_action(t_philosopher *philo, const char *action);
 void pick_up_forks(t_philosopher *philo);
 void release_forks(t_philosopher *philo);

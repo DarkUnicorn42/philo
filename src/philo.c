@@ -12,6 +12,45 @@
 
 #include "../include/philo.h"
 
+void *supervisor_routine(void *arg)
+{
+    t_philosopher *philosophers = (t_philosopher *)arg;
+    t_simulation *sim = philosophers[0].sim;
+
+    while (1)
+    {
+        pthread_mutex_lock(&sim->death_mutex);
+        if (sim->death_flag)
+        {
+            pthread_mutex_unlock(&sim->death_mutex);
+            break;
+        }
+        pthread_mutex_unlock(&sim->death_mutex);
+
+        for (int i = 0; i < sim->number_of_philosophers; i++)
+        {
+            pthread_mutex_lock(&sim->meal_mutex);
+            long time_since_last_meal = current_time_in_ms() - philosophers[i].last_meal_time;
+
+            if (time_since_last_meal > sim->time_to_die)
+            {
+                pthread_mutex_lock(&sim->death_mutex);
+                sim->death_flag = 1;
+                pthread_mutex_unlock(&sim->death_mutex);
+
+                print_action(&philosophers[i], "died");
+
+                pthread_mutex_unlock(&sim->meal_mutex);
+                return NULL;  // Exit the supervisor thread as soon as one philosopher dies
+            }
+            pthread_mutex_unlock(&sim->meal_mutex);
+        }
+        usleep(1000);  // Small delay to reduce CPU usage
+    }
+    return NULL;
+}
+
+
 // Helper function to print actions
 void	print_action(t_philosopher *philo, const char *action)
 {
@@ -113,19 +152,11 @@ void *philosopher_routine(void *arg)
             pthread_exit(NULL);  // Exit if the philosopher has died
         }
 
-        // Eating with frequent death checks
-        philo->last_meal_time = current_time_in_ms();  // Update last meal time
+        pthread_mutex_lock(&philo->sim->meal_mutex);
+        philo->last_meal_time = current_time_in_ms();
+        pthread_mutex_unlock(&philo->sim->meal_mutex);
         print_action(philo, "is eating");
-        long eat_start = current_time_in_ms();
-        while (current_time_in_ms() - eat_start < philo->sim->time_to_eat)
-        {
-            if (check_death(philo))
-            {
-                release_forks(philo);
-                pthread_exit(NULL);  // Exit if the philosopher has died
-            }
-            usleep(100);  // Small sleep intervals to allow frequent death checks
-        }
+        usleep(philo->sim->time_to_eat * 1000);
         philo->times_eaten++;
 
         // Check if the philosopher has eaten enough times
@@ -148,11 +179,11 @@ void *philosopher_routine(void *arg)
         // Release forks
         release_forks(philo);
 
-        // Check death after eating
-        if (check_death(philo))
-        {
-            pthread_exit(NULL);  // Exit if the philosopher has died
-        }
+        // // Check death after eating
+        // if (check_death(philo))
+        // {
+        //     pthread_exit(NULL);  // Exit if the philosopher has died
+        // }
 
         // Sleeping with frequent death checks
         print_action(philo, "is sleeping");
@@ -176,39 +207,34 @@ void *philosopher_routine(void *arg)
     return NULL;
 }
 
-
 void start_simulation(t_philosopher *philosophers, t_simulation *sim)
 {
     pthread_t *threads;
-    threads = malloc(sizeof(pthread_t) * sim->number_of_philosophers);
+    pthread_t supervisor_thread;
 
+    threads = malloc(sizeof(pthread_t) * sim->number_of_philosophers);
     if (!threads)
         print_error("Failed to allocate memory for threads");
 
+    // Create the supervisor thread
+    if (pthread_create(&supervisor_thread, NULL, supervisor_routine, philosophers) != 0)
+        print_error("Failed to create supervisor thread");
+
+    // Create the philosopher threads
     for (int i = 0; i < sim->number_of_philosophers; i++)
     {
         if (pthread_create(&threads[i], NULL, philosopher_routine, &philosophers[i]) != 0)
             print_error("Failed to create philosopher thread");
     }
 
-    // Continuously check if a philosopher has died
-    while (1)
-    {
-        pthread_mutex_lock(&sim->death_mutex);
-        if (sim->death_flag == 1)
-        {
-            pthread_mutex_unlock(&sim->death_mutex);
-            break;  // Exit loop if a philosopher has died
-        }
-        pthread_mutex_unlock(&sim->death_mutex);
-        usleep(10);  // Sleep for a short while before checking again
-    }
-
-    // Join all threads
+    // Join all philosopher threads
     for (int i = 0; i < sim->number_of_philosophers; i++)
     {
         pthread_join(threads[i], NULL);
     }
+
+    // Join the supervisor thread
+    pthread_join(supervisor_thread, NULL);
 
     free(threads);
 }
