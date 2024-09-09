@@ -45,7 +45,7 @@ typedef struct s_philosopher
 {
     int id;
     int times_eaten;
-    long last_meal_time;  // Time when the philosopher last ate
+    long last_meal_time;
     pthread_mutex_t *left_fork;
     pthread_mutex_t *right_fork;
     t_simulation *sim;

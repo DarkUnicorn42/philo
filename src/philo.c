@@ -6,7 +6,7 @@
 /*   By: mwojtcza <mwojtcza@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/09 13:40:27 by mwojtcza          #+#    #+#             */
-/*   Updated: 2024/09/09 13:41:21 by mwojtcza         ###   ########.fr       */
+/*   Updated: 2024/09/09 14:04:46 by mwojtcza         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -77,6 +77,13 @@ void *philosopher_routine(void *arg)
 {
     t_philosopher *philo = (t_philosopher *)arg;
 
+    // Special case: one philosopher
+    if (philo->sim->number_of_philosophers == 1)
+    {
+        handle_single_philosopher(philo);
+        pthread_exit(NULL);
+    }
+
     while (1)
     {
         // Check if a philosopher has already died
@@ -91,13 +98,34 @@ void *philosopher_routine(void *arg)
         // Thinking
         print_action(philo, "is thinking");
 
+        // Check death after thinking
+        if (check_death(philo))
+        {
+            pthread_exit(NULL);  // Exit if the philosopher has died
+        }
+
         // Pick up forks
         pick_up_forks(philo);
 
-        // Eating
-        philo->last_meal_time = current_time_in_ms();
+        // Check death after picking up forks
+        if (check_death(philo))
+        {
+            pthread_exit(NULL);  // Exit if the philosopher has died
+        }
+
+        // Eating with frequent death checks
+        philo->last_meal_time = current_time_in_ms();  // Update last meal time
         print_action(philo, "is eating");
-        usleep(philo->sim->time_to_eat * 1000);
+        long eat_start = current_time_in_ms();
+        while (current_time_in_ms() - eat_start < philo->sim->time_to_eat)
+        {
+            if (check_death(philo))
+            {
+                release_forks(philo);
+                pthread_exit(NULL);  // Exit if the philosopher has died
+            }
+            usleep(100);  // Small sleep intervals to allow frequent death checks
+        }
         philo->times_eaten++;
 
         // Check if the philosopher has eaten enough times
@@ -110,7 +138,6 @@ void *philosopher_routine(void *arg)
             philo->sim->finished_philosophers++;
             if (philo->sim->finished_philosophers == philo->sim->number_of_philosophers)
             {
-                printf("Everyone ate enough\n");
                 philo->sim->death_flag = 1;  // Set death_flag to stop the simulation if all have finished
             }
             pthread_mutex_unlock(&philo->sim->death_mutex);
@@ -121,17 +148,25 @@ void *philosopher_routine(void *arg)
         // Release forks
         release_forks(philo);
 
-        // Check if the philosopher has died after eating
+        // Check death after eating
         if (check_death(philo))
         {
             pthread_exit(NULL);  // Exit if the philosopher has died
         }
 
-        // Sleeping
+        // Sleeping with frequent death checks
         print_action(philo, "is sleeping");
-        usleep(philo->sim->time_to_sleep * 1000);
+        long sleep_start = current_time_in_ms();
+        while (current_time_in_ms() - sleep_start < philo->sim->time_to_sleep)
+        {
+            if (check_death(philo))
+            {
+                pthread_exit(NULL);  // Exit if the philosopher has died
+            }
+            usleep(100);  // Small sleep intervals to allow frequent death checks
+        }
 
-        // Check if the philosopher has died after sleeping
+        // Check death after sleeping
         if (check_death(philo))
         {
             pthread_exit(NULL);  // Exit if the philosopher has died
@@ -140,6 +175,7 @@ void *philosopher_routine(void *arg)
 
     return NULL;
 }
+
 
 void start_simulation(t_philosopher *philosophers, t_simulation *sim)
 {
@@ -165,7 +201,7 @@ void start_simulation(t_philosopher *philosophers, t_simulation *sim)
             break;  // Exit loop if a philosopher has died
         }
         pthread_mutex_unlock(&sim->death_mutex);
-        usleep(1000);  // Sleep for a short while before checking again
+        usleep(10);  // Sleep for a short while before checking again
     }
 
     // Join all threads
