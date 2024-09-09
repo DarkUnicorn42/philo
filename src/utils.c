@@ -12,14 +12,15 @@
 
 #include "../include/philo.h"
 
-long current_time_in_ms()
+long	current_time_in_ms(void)
 {
-    struct timeval time;
-    gettimeofday(&time, NULL);  // Get current time
-    return (time.tv_sec * 1000) + (time.tv_usec / 1000);  // Convert to milliseconds
+	struct timeval	time;
+
+	gettimeofday(&time, NULL);
+	return ((time.tv_sec * 1000) + (time.tv_usec / 1000));
 }
 
-int ft_atoi(const char *nptr)
+int	ft_atoi(const char *nptr)
 {
 	int	i;
 	int	sign;
@@ -45,66 +46,58 @@ int ft_atoi(const char *nptr)
 	return (res *= sign);
 }
 
-void print_error(char *message)
+void	print_error(char *message)
 {
-    printf("Error: %s\n", message);
-    exit(EXIT_FAILURE);
+	printf("Error: %s\n", message);
+	exit(EXIT_FAILURE);
 }
 
-void parse_arguments(int argc, char **argv, t_simulation *sim)
+void	parse_arguments(int argc, char **argv, t_simulation *sim)
 {
-    if (argc < 5 || argc > 6)  // We expect either 4 or 5 arguments
-        print_error("Invalid number of arguments");
-
-    sim->number_of_philosophers = ft_atoi(argv[1]);
-    sim->time_to_die = ft_atoi(argv[2]);
-    sim->time_to_eat = ft_atoi(argv[3]);
-    sim->time_to_sleep = ft_atoi(argv[4]);
-
-    if (argc == 6)
-    {
-        sim->number_of_times_each_philosopher_must_eat = ft_atoi(argv[5]);
-        sim->is_optional_arg_present = 1;
-    }
-    else
-    {
-        sim->is_optional_arg_present = 0;
-    }
-
-    // Error handling for invalid arguments (e.g., negative or zero values)
-    if (sim->number_of_philosophers <= 0 || sim->time_to_die <= 0 ||
-        sim->time_to_eat <= 0 || sim->time_to_sleep <= 0)
-    {
-        print_error("Arguments must be positive integers");
-    }
-
-    if (sim->is_optional_arg_present && sim->number_of_times_each_philosopher_must_eat <= 0)
-    {
-        print_error("Optional argument must be a positive integer");
-    }
+	if (argc < 5 || argc > 6)
+		print_error("Invalid number of arguments");
+	sim->number_of_philosophers = ft_atoi(argv[1]);
+	sim->time_to_die = ft_atoi(argv[2]);
+	sim->time_to_eat = ft_atoi(argv[3]);
+	sim->time_to_sleep = ft_atoi(argv[4]);
+	if (argc == 6)
+	{
+		sim->number_of_times_each_philosopher_must_eat = ft_atoi(argv[5]);
+		sim->is_optional_arg_present = 1;
+	}
+	else
+		sim->is_optional_arg_present = 0;
+	if (sim->number_of_philosophers <= 0 || sim->time_to_die <= 0
+		|| sim->time_to_eat <= 0 || sim->time_to_sleep <= 0)
+	{
+		print_error("Arguments must be positive integers");
+	}
+	if (sim->is_optional_arg_present
+		&& sim->number_of_times_each_philosopher_must_eat <= 0)
+	{
+		print_error("Optional argument must be a positive integer");
+	}
 }
 
-void init_forks(t_simulation *sim)
+void	init_forks(t_simulation *sim)
 {
-    sim->forks = malloc(sizeof(pthread_mutex_t) * sim->number_of_philosophers);
-    if (!sim->forks)
-        print_error("Failed to allocate memory for forks");
+	int	i;
 
-    for (int i = 0; i < sim->number_of_philosophers; i++)
-    {
-        if (pthread_mutex_init(&sim->forks[i], NULL) != 0)
-            print_error("Failed to initialize fork mutex");
-    }
-
-    // Initialize the log mutex
-    if (pthread_mutex_init(&sim->log_mutex, NULL) != 0)
-        print_error("Failed to initialize log mutex");
-
-    // Initialize the death mutex and set the death flag to 0 (no one has died yet)
-    if (pthread_mutex_init(&sim->death_mutex, NULL) != 0)
-        print_error("Failed to initialize death mutex");
-
-    sim->death_flag = 0;
+	i = 0;
+	sim->forks = malloc(sizeof(pthread_mutex_t) * sim->number_of_philosophers);
+	if (!sim->forks)
+		print_error("Failed to allocate memory for forks");
+	while (i < sim->number_of_philosophers)
+	{
+		if (pthread_mutex_init(&sim->forks[i], NULL) != 0)
+			print_error("Failed to initialize fork mutex");
+		i++;
+	}
+	if (pthread_mutex_init(&sim->log_mutex, NULL) != 0)
+		print_error("Failed to initialize log mutex");
+	if (pthread_mutex_init(&sim->death_mutex, NULL) != 0)
+		print_error("Failed to initialize death mutex");
+	sim->death_flag = 0;
 }
 
 void cleanup_forks(t_simulation *sim)

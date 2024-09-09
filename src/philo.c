@@ -1,8 +1,19 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   philo.c                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mwojtcza <mwojtcza@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/09 13:40:27 by mwojtcza          #+#    #+#             */
+/*   Updated: 2024/09/09 13:41:21 by mwojtcza         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
 #include "../include/philo.h"
 
 // Helper function to print actions
-void print_action(t_philosopher *philo, const char *action)
+void	print_action(t_philosopher *philo, const char *action)
 {
     long timestamp;
 
