@@ -135,3 +135,17 @@ void handle_single_philosopher(t_philosopher *philo)
     print_action(philo, "died");
     pthread_mutex_unlock(philo->left_fork);
 }
+
+
+// Helper function to print actions
+void print_action(t_philosopher *philo, const char *action)
+{
+    long timestamp;
+    if (philo->sim->death_flag == 0)  // Only log if no philosopher has died
+    {
+        timestamp = current_time_in_ms() - philo->sim->start_time;
+        pthread_mutex_lock(&philo->sim->log_mutex);
+        printf("%ld %d %s\n", timestamp, philo->id, action);
+        pthread_mutex_unlock(&philo->sim->log_mutex);
+    }
+}

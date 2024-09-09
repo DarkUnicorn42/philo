@@ -27,45 +27,51 @@ void *supervisor_routine(void *arg)
         }
         pthread_mutex_unlock(&sim->death_mutex);
 
+        int finished_philosophers = 0;
+
         for (int i = 0; i < sim->number_of_philosophers; i++)
         {
             pthread_mutex_lock(&sim->meal_mutex);
             long time_since_last_meal = current_time_in_ms() - philosophers[i].last_meal_time;
 
+            // Check if a philosopher has died
             if (time_since_last_meal > sim->time_to_die)
             {
                 pthread_mutex_lock(&sim->death_mutex);
-                sim->death_flag = 1;
-                pthread_mutex_unlock(&sim->death_mutex);
-
                 print_action(&philosophers[i], "died");
+                sim->death_flag = 1;
 
+                pthread_mutex_unlock(&sim->death_mutex);
                 pthread_mutex_unlock(&sim->meal_mutex);
-                return NULL;  // Exit the supervisor thread as soon as one philosopher dies
+
+                return NULL;  // Exit the supervisor thread after printing the death message
             }
+
+            // Check if a philosopher has eaten enough times
+            if (sim->is_optional_arg_present && philosophers[i].times_eaten >= sim->number_of_times_each_philosopher_must_eat)
+            {
+                finished_philosophers++;
+            }
+
             pthread_mutex_unlock(&sim->meal_mutex);
         }
-        usleep(1000);  // Small delay to reduce CPU usage
+
+        // If all philosophers have eaten enough, print message and exit
+        if (sim->is_optional_arg_present && finished_philosophers == sim->number_of_philosophers)
+        {
+            pthread_mutex_lock(&sim->death_mutex);
+            // pthread_mutex_lock(&sim->log_mutex);
+            printf("All philosophers have eaten enough times. Exiting...\n");
+            sim->death_flag = 1;  // Set death flag to stop the simulation
+            // pthread_mutex_unlock(&sim->log_mutex);
+            pthread_mutex_unlock(&sim->death_mutex);
+            return NULL;  // Exit the supervisor thread
+        }
+
+        usleep(100);  // Small delay to reduce CPU usage
     }
+
     return NULL;
-}
-
-
-// Helper function to print actions
-void	print_action(t_philosopher *philo, const char *action)
-{
-    long timestamp;
-
-    // Lock and check death flag
-    //pthread_mutex_lock(&philo->sim->death_mutex);
-    if (philo->sim->death_flag == 0)  // Only print if no philosopher has died
-    {
-        timestamp = current_time_in_ms() - philo->sim->start_time;
-        pthread_mutex_lock(&philo->sim->log_mutex);
-        printf("%ld %d %s\n", timestamp, philo->id, action);
-        pthread_mutex_unlock(&philo->sim->log_mutex);
-    }
-   // pthread_mutex_unlock(&philo->sim->death_mutex);
 }
 
 // Helper function to pick up forks
@@ -94,24 +100,6 @@ void release_forks(t_philosopher *philo)
     pthread_mutex_unlock(philo->right_fork);
 }
 
-// Helper function to check death condition and set the death flag if needed
-int check_death(t_philosopher *philo)
-{
-    if (current_time_in_ms() - philo->last_meal_time > philo->sim->time_to_die)
-    {
-        pthread_mutex_lock(&philo->sim->death_mutex);
-        if (philo->sim->death_flag == 0)
-        {
-            print_action(philo, "died");  // Log the death
-            philo->sim->death_flag = 1;   // Set the death flag
-           // printf("DEBUG: Philosopher %d died.\n", philo->id);  // Debugging message
-        }
-        pthread_mutex_unlock(&philo->sim->death_mutex);
-        return 1;  // Philosopher has died
-    }
-    return 0;
-}
-
 void *philosopher_routine(void *arg)
 {
     t_philosopher *philo = (t_philosopher *)arg;
@@ -130,6 +118,7 @@ void *philosopher_routine(void *arg)
         if (philo->sim->death_flag == 1)
         {
             pthread_mutex_unlock(&philo->sim->death_mutex);
+            // printf("Philosopher %d died\n", philo->id);
             pthread_exit(NULL);  // Exit if the death flag is set
         }
         pthread_mutex_unlock(&philo->sim->death_mutex);
@@ -137,71 +126,42 @@ void *philosopher_routine(void *arg)
         // Thinking
         print_action(philo, "is thinking");
 
-        // Check death after thinking
-        if (check_death(philo))
-        {
-            pthread_exit(NULL);  // Exit if the philosopher has died
-        }
-
         // Pick up forks
         pick_up_forks(philo);
 
-        // Check death after picking up forks
-        if (check_death(philo))
-        {
-            pthread_exit(NULL);  // Exit if the philosopher has died
-        }
-
+        // Eating
         pthread_mutex_lock(&philo->sim->meal_mutex);
-        philo->last_meal_time = current_time_in_ms();
+        philo->last_meal_time = current_time_in_ms();  // Update last meal time
         pthread_mutex_unlock(&philo->sim->meal_mutex);
+
         print_action(philo, "is eating");
         usleep(philo->sim->time_to_eat * 1000);
         philo->times_eaten++;
 
-        // Check if the philosopher has eaten enough times
-        if (philo->sim->is_optional_arg_present && philo->times_eaten >= philo->sim->number_of_times_each_philosopher_must_eat)
-        {
-            release_forks(philo);
+        // // Check if the philosopher has eaten enough times
+        // if (philo->sim->is_optional_arg_present && philo->times_eaten >= philo->sim->number_of_times_each_philosopher_must_eat)
+        // {
+        //     release_forks(philo);
             
-            // Increment the finished philosophers count
-            pthread_mutex_lock(&philo->sim->death_mutex);
-            philo->sim->finished_philosophers++;
-            if (philo->sim->finished_philosophers == philo->sim->number_of_philosophers)
-            {
-                philo->sim->death_flag = 1;  // Set death_flag to stop the simulation if all have finished
-            }
-            pthread_mutex_unlock(&philo->sim->death_mutex);
+        //     // Increment the finished philosophers count
+        //     pthread_mutex_lock(&philo->sim->death_mutex);
+        //     philo->sim->finished_philosophers++;
+        //     if (philo->sim->finished_philosophers == philo->sim->number_of_philosophers)
+        //     {
+                
+        //         philo->sim->death_flag = 1;  // Set death_flag to stop the simulation if all have finished
+        //     }
+        //     pthread_mutex_unlock(&philo->sim->death_mutex);
 
-            pthread_exit(NULL);  // Exit if the philosopher has eaten enough times
-        }
+        //     pthread_exit(NULL);  // Exit if the philosopher has eaten enough times
+        // }
 
         // Release forks
         release_forks(philo);
 
-        // // Check death after eating
-        // if (check_death(philo))
-        // {
-        //     pthread_exit(NULL);  // Exit if the philosopher has died
-        // }
-
-        // Sleeping with frequent death checks
+        // Sleeping
         print_action(philo, "is sleeping");
-        long sleep_start = current_time_in_ms();
-        while (current_time_in_ms() - sleep_start < philo->sim->time_to_sleep)
-        {
-            if (check_death(philo))
-            {
-                pthread_exit(NULL);  // Exit if the philosopher has died
-            }
-            usleep(100);  // Small sleep intervals to allow frequent death checks
-        }
-
-        // Check death after sleeping
-        if (check_death(philo))
-        {
-            pthread_exit(NULL);  // Exit if the philosopher has died
-        }
+        usleep(philo->sim->time_to_sleep * 1000);
     }
 
     return NULL;
@@ -211,8 +171,8 @@ void start_simulation(t_philosopher *philosophers, t_simulation *sim)
 {
     pthread_t *threads;
     pthread_t supervisor_thread;
-
     threads = malloc(sizeof(pthread_t) * sim->number_of_philosophers);
+
     if (!threads)
         print_error("Failed to allocate memory for threads");
 
@@ -238,6 +198,7 @@ void start_simulation(t_philosopher *philosophers, t_simulation *sim)
 
     free(threads);
 }
+
 
 
 int main(int argc, char **argv)
