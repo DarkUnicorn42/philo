@@ -141,11 +141,12 @@ void handle_single_philosopher(t_philosopher *philo)
 void print_action(t_philosopher *philo, const char *action)
 {
     long timestamp;
+
+	pthread_mutex_lock(&philo->sim->log_mutex);
     if (philo->sim->death_flag == 0)  // Only log if no philosopher has died
     {
         timestamp = current_time_in_ms() - philo->sim->start_time;
-        pthread_mutex_lock(&philo->sim->log_mutex);
         printf("%ld %d %s\n", timestamp, philo->id, action);
-        pthread_mutex_unlock(&philo->sim->log_mutex);
     }
+	pthread_mutex_unlock(&philo->sim->log_mutex);
 }

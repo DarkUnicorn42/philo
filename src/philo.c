@@ -59,11 +59,14 @@ void *supervisor_routine(void *arg)
         // If all philosophers have eaten enough, print message and exit
         if (sim->is_optional_arg_present && finished_philosophers == sim->number_of_philosophers)
         {
+            usleep(10);  // Small delay to prevent interleaving of messages
+
             pthread_mutex_lock(&sim->death_mutex);
-            // pthread_mutex_lock(&sim->log_mutex);
+            pthread_mutex_lock(&sim->log_mutex);
+
             printf("All philosophers have eaten enough times. Exiting...\n");
             sim->death_flag = 1;  // Set death flag to stop the simulation
-            // pthread_mutex_unlock(&sim->log_mutex);
+            pthread_mutex_unlock(&sim->log_mutex);
             pthread_mutex_unlock(&sim->death_mutex);
             return NULL;  // Exit the supervisor thread
         }
