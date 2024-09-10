@@ -23,6 +23,19 @@
 #define EATING 1
 #define SLEEPING 2
 
+struct s_simulation;  // Forward declaration of simulation struct
+
+typedef struct s_philosopher
+{
+    int id;
+    int times_eaten;
+    long last_meal_time;
+    pthread_mutex_t *left_fork;
+    pthread_mutex_t *right_fork;
+    pthread_mutex_t meal_mutex;
+    struct s_simulation *sim;  // Reference to simulation struct
+} t_philosopher;
+
 typedef struct s_simulation
 {
     int number_of_philosophers;
@@ -34,23 +47,15 @@ typedef struct s_simulation
     long start_time;
 
     pthread_mutex_t *forks;
-    pthread_mutex_t log_mutex;      // Mutex for synchronized logging
-    pthread_mutex_t death_mutex;    // Mutex to protect the death flag
-    pthread_mutex_t meal_mutex;
-    int death_flag;                 // 1 if a philosopher has died, 0 otherwise
-    int finished_philosophers; 
+    pthread_mutex_t log_mutex;
+    pthread_mutex_t death_mutex;
+
+    int death_flag;
+    int finished_philosophers;
+
+    t_philosopher *philosophers;  // Array of philosopher structs
 } t_simulation;
 
-
-typedef struct s_philosopher
-{
-    int id;
-    int times_eaten;
-    long last_meal_time;
-    pthread_mutex_t *left_fork;
-    pthread_mutex_t *right_fork;
-    t_simulation *sim;
-} t_philosopher;
 
 void handle_single_philosopher(t_philosopher *philo);
 void print_action(t_philosopher *philo, const char *action);
@@ -63,9 +68,9 @@ long current_time_in_ms();
 int ft_atoi(const char *nptr);
 void parse_arguments(int argc, char **argv, t_simulation *sim);
 void print_error(char *message);
-void start_simulation(t_philosopher *philosophers, t_simulation *sim);
+void start_simulation(t_simulation *sim);
 void *philosopher_routine(void *arg);
-void init_philosophers(t_philosopher *philosophers, t_simulation *sim);
+void init_philosophers(t_simulation *sim);
 void cleanup_forks(t_simulation *sim);
 void init_forks(t_simulation *sim);
 

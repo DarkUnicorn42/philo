@@ -103,28 +103,40 @@ void	init_forks(t_simulation *sim)
 void cleanup_forks(t_simulation *sim)
 {
     for (int i = 0; i < sim->number_of_philosophers; i++)
+    {
         pthread_mutex_destroy(&sim->forks[i]);
+        pthread_mutex_destroy(&sim->philosophers[i].meal_mutex);  // Destroy per-philosopher meal mutex
+    }
 
-    free(sim->forks);
+    free(sim->forks);  // Clean up fork memory
+    free(sim->philosophers);  // Clean up philosophers memory
 
-    // Destroy the log mutex and death mutex
     pthread_mutex_destroy(&sim->log_mutex);
     pthread_mutex_destroy(&sim->death_mutex);
 }
 
 
-void init_philosophers(t_philosopher *philosophers, t_simulation *sim)
+void init_philosophers(t_simulation *sim)
 {
+    sim->philosophers = malloc(sizeof(t_philosopher) * sim->number_of_philosophers);
+    if (!sim->philosophers)
+        print_error("Failed to allocate memory for philosophers");
+
     for (int i = 0; i < sim->number_of_philosophers; i++)
     {
-        philosophers[i].id = i + 1;  // Philosopher IDs are 1-based
-        philosophers[i].times_eaten = 0;
-        philosophers[i].last_meal_time = current_time_in_ms();
-        philosophers[i].left_fork = &sim->forks[i];
-        philosophers[i].right_fork = &sim->forks[(i + 1) % sim->number_of_philosophers];  // Circular seating
-        philosophers[i].sim = sim;
+        sim->philosophers[i].id = i + 1;  // Philosopher IDs are 1-based
+        sim->philosophers[i].times_eaten = 0;
+        sim->philosophers[i].last_meal_time = current_time_in_ms();
+        sim->philosophers[i].left_fork = &sim->forks[i];
+        sim->philosophers[i].right_fork = &sim->forks[(i + 1) % sim->number_of_philosophers];
+        sim->philosophers[i].sim = sim;
+
+        // Initialize the per-philosopher meal mutex
+        pthread_mutex_init(&sim->philosophers[i].meal_mutex, NULL);
+		//usleep(10);
     }
 }
+
 
 void handle_single_philosopher(t_philosopher *philo)
 {
