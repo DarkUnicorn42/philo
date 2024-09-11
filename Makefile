@@ -3,7 +3,10 @@ NAME = philo
 
 # Source files
 SOURCES =	src/philo.c \
+			src/forks.c \
 			src/utils.c \
+			src/supervisor.c \
+			src/parse_init_cleanup.c \
 
 # Object files
 OBJECTS = $(SOURCES:.c=.o)

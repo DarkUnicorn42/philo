@@ -56,22 +56,36 @@ typedef struct s_simulation
     t_philosopher *philosophers;  // Array of philosopher structs
 } t_simulation;
 
-
-void handle_single_philosopher(t_philosopher *philo);
-void print_action(t_philosopher *philo, const char *action);
-void pick_up_forks(t_philosopher *philo);
-void release_forks(t_philosopher *philo);
-int check_death(t_philosopher *philo);
-
-// Function prototypes
-long current_time_in_ms();  
-int ft_atoi(const char *nptr);
+// parse_init_cleanup.c
 void parse_arguments(int argc, char **argv, t_simulation *sim);
-void print_error(char *message);
-void start_simulation(t_simulation *sim);
-void *philosopher_routine(void *arg);
+void init_forks(t_simulation *sim);
 void init_philosophers(t_simulation *sim);
 void cleanup_forks(t_simulation *sim);
-void init_forks(t_simulation *sim);
+
+// supervisor.c
+void *supervisor_routine(void *arg);
+int check_philosopher_death(t_simulation *sim, int i);
+int check_philosopher_meals(t_simulation *sim);
+void check_philosopher_status(t_simulation *sim);
+void handle_single_philosopher(t_philosopher *philo);
+
+// forks.c
+int get_next_philosopher_id(t_philosopher *philo);
+int get_previous_philosopher_id(t_philosopher *philo);
+int is_neighbor_hungrier(t_philosopher *philo, int next_philo_id, int prev_philo_id);
+void lock_forks(t_philosopher *philo);
+void pick_up_forks(t_philosopher *philo);
+
+// utils.c
+long current_time_in_ms();  
+int ft_atoi(const char *nptr);
+void print_error(char *message);
+void print_action(t_philosopher *philo, const char *action);
+void release_forks(t_philosopher *philo);
+
+// philo.c
+void *philosopher_routine(void *arg);
+void start_simulation(t_simulation *sim);
+int check_death(t_philosopher *philo);
 
 #endif
