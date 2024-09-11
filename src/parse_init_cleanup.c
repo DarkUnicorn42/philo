@@ -1,3 +1,14 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   parse_init_cleanup.c                               :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mwojtcza <mwojtcza@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/11 15:19:32 by mwojtcza          #+#    #+#             */
+/*   Updated: 2024/09/11 15:19:32 by mwojtcza         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
 #include "../include/philo.h"
 
@@ -49,40 +60,42 @@ void	init_forks(t_simulation *sim)
 	sim->death_flag = 0;
 }
 
-void init_philosophers(t_simulation *sim)
+void	init_philosophers(t_simulation *sim)
 {
-	int i;
+	int	i;
 
 	i = 0;
-    sim->philosophers = malloc(sizeof(t_philosopher) * sim->number_of_philosophers);
-    if (!sim->philosophers)
-        print_error("Failed to allocate memory for philosophers");
-    while (i < sim->number_of_philosophers)
-    {
-        sim->philosophers[i].id = i + 1;
-        sim->philosophers[i].times_eaten = 0;
-        sim->philosophers[i].last_meal_time = current_time_in_ms();
-        sim->philosophers[i].left_fork = &sim->forks[i];
-        sim->philosophers[i].right_fork = &sim->forks[(i + 1) % sim->number_of_philosophers];
-        sim->philosophers[i].sim = sim;
-        pthread_mutex_init(&sim->philosophers[i].meal_mutex, NULL);
+	sim->philosophers = malloc(sizeof(t_philosopher)
+			* sim->number_of_philosophers);
+	if (!sim->philosophers)
+		print_error("Failed to allocate memory for philosophers");
+	while (i < sim->number_of_philosophers)
+	{
+		sim->philosophers[i].id = i + 1;
+		sim->philosophers[i].times_eaten = 0;
+		sim->philosophers[i].last_meal_time = cur_time_ms();
+		sim->philosophers[i].left_fork = &sim->forks[i];
+		sim->philosophers[i].right_fork = &sim->forks[(i + 1)
+			% sim->number_of_philosophers];
+		sim->philosophers[i].sim = sim;
+		pthread_mutex_init(&sim->philosophers[i].meal_mutex, NULL);
 		i++;
-    }
+	}
 }
 
-void cleanup_forks(t_simulation *sim)
+void	cleanup_forks(t_simulation *sim)
 {
-	int i;
+	int	i;
 
 	i = 0;
-    while (i < sim->number_of_philosophers)
-    {
-        pthread_mutex_destroy(&sim->forks[i]);
-        pthread_mutex_destroy(&sim->philosophers[i].meal_mutex);
+	while (i < sim->number_of_philosophers)
+	{
+		pthread_mutex_destroy(&sim->forks[i]);
+		pthread_mutex_destroy(&sim->philosophers[i].meal_mutex);
 		i++;
-    }
-    free(sim->forks);
-    free(sim->philosophers);
-    pthread_mutex_destroy(&sim->log_mutex);
-    pthread_mutex_destroy(&sim->death_mutex);
+	}
+	free(sim->forks);
+	free(sim->philosophers);
+	pthread_mutex_destroy(&sim->log_mutex);
+	pthread_mutex_destroy(&sim->death_mutex);
 }

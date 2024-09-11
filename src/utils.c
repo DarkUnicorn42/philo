@@ -12,7 +12,7 @@
 
 #include "../include/philo.h"
 
-long	current_time_in_ms(void)
+long	cur_time_ms(void)
 {
 	struct timeval	time;
 
@@ -52,21 +52,21 @@ void	print_error(char *message)
 	exit(EXIT_FAILURE);
 }
 
-void print_action(t_philosopher *philo, const char *action)
+void	print_action(t_philosopher *philo, const char *action)
 {
-    long timestamp;
+	long	timestamp;
 
 	pthread_mutex_lock(&philo->sim->log_mutex);
-    if (philo->sim->death_flag == 0)
-    {
-        timestamp = current_time_in_ms() - philo->sim->start_time;
-        printf("%ld %d %s\n", timestamp, philo->id, action);
-    }
+	if (philo->sim->death_flag == 0)
+	{
+		timestamp = cur_time_ms() - philo->sim->start_time;
+		printf("%ld %d %s\n", timestamp, philo->id, action);
+	}
 	pthread_mutex_unlock(&philo->sim->log_mutex);
 }
 
-void release_forks(t_philosopher *philo)
+void	release_forks(t_philosopher *philo)
 {
-    pthread_mutex_unlock(philo->left_fork);
-    pthread_mutex_unlock(philo->right_fork);
+	pthread_mutex_unlock(philo->left_fork);
+	pthread_mutex_unlock(philo->right_fork);
 }

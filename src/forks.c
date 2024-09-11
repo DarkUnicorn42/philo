@@ -1,83 +1,93 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   forks.c                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mwojtcza <mwojtcza@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/11 14:48:35 by mwojtcza          #+#    #+#             */
+/*   Updated: 2024/09/11 14:48:35 by mwojtcza         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
 #include "../include/philo.h"
 
-int get_next_philosopher_id(t_philosopher *philo)
+int	get_next_philosopher_id(t_philosopher *philo)
 {
-    t_simulation *sim = philo->sim;
+	t_simulation	*sim;
 
-    if (philo->id == sim->number_of_philosophers)
-        return (0);
-    return (philo->id);
+	sim = philo->sim;
+	if (philo->id == sim->number_of_philosophers)
+		return (0);
+	return (philo->id);
 }
 
-int get_previous_philosopher_id(t_philosopher *philo)
+int	get_previous_philosopher_id(t_philosopher *philo)
 {
-    t_simulation *sim = philo->sim;
+	t_simulation	*sim;
 
-    if (philo->id == 1)
-        return (sim->number_of_philosophers - 1);
-    return (philo->id - 2);
+	sim = philo->sim;
+	if (philo->id == 1)
+		return (sim->number_of_philosophers - 1);
+	return (philo->id - 2);
 }
 
-int is_neighbor_hungrier(t_philosopher *philo, int next_philo_id, int prev_philo_id)
+int	is_neighbor_hungrier(t_philosopher *philo, int next_id, int prev_id)
 {
-    t_simulation *sim = philo->sim;
-    long time_since_last_meal_next;
-    long time_since_last_meal_prev;
-    long time_since_last_meal_current;
+	t_simulation	*sim;
+	long			t_meal_next;
+	long			t_meal_prev;
+	long			t_meal_cur;
 
-    pthread_mutex_lock(&sim->philosophers[next_philo_id].meal_mutex);
-    time_since_last_meal_next = current_time_in_ms() - sim->philosophers[next_philo_id].last_meal_time;
-    pthread_mutex_unlock(&sim->philosophers[next_philo_id].meal_mutex);
-    pthread_mutex_lock(&sim->philosophers[prev_philo_id].meal_mutex);
-    time_since_last_meal_prev = current_time_in_ms() - sim->philosophers[prev_philo_id].last_meal_time;
-    pthread_mutex_unlock(&sim->philosophers[prev_philo_id].meal_mutex);
-    pthread_mutex_lock(&philo->meal_mutex);
-    time_since_last_meal_current = current_time_in_ms() - philo->last_meal_time;
-    pthread_mutex_unlock(&philo->meal_mutex);
-    return (time_since_last_meal_next > time_since_last_meal_current ||
-            time_since_last_meal_prev > time_since_last_meal_current);
+	sim = philo->sim;
+	pthread_mutex_lock(&sim->philosophers[next_id].meal_mutex);
+	t_meal_next = cur_time_ms() - sim->philosophers[next_id].last_meal_time;
+	pthread_mutex_unlock(&sim->philosophers[next_id].meal_mutex);
+	pthread_mutex_lock(&sim->philosophers[prev_id].meal_mutex);
+	t_meal_prev = cur_time_ms() - sim->philosophers[prev_id].last_meal_time;
+	pthread_mutex_unlock(&sim->philosophers[prev_id].meal_mutex);
+	pthread_mutex_lock(&philo->meal_mutex);
+	t_meal_cur = cur_time_ms() - philo->last_meal_time;
+	pthread_mutex_unlock(&philo->meal_mutex);
+	return (t_meal_next > t_meal_cur || t_meal_prev > t_meal_cur);
 }
 
-void lock_forks(t_philosopher *philo)
+void	lock_forks(t_philosopher *philo)
 {
-    if (philo->id % 2 == 0)
-    {
-        pthread_mutex_lock(philo->right_fork);
-        print_action(philo, "has taken a fork");
-        pthread_mutex_lock(philo->left_fork);
-        print_action(philo, "has taken a fork");
-    }
-    else
-    {
-        pthread_mutex_lock(philo->left_fork);
-        print_action(philo, "has taken a fork");
-        pthread_mutex_lock(philo->right_fork);
-        print_action(philo, "has taken a fork");
-    }
+	if (philo->id % 2 == 0)
+	{
+		pthread_mutex_lock(philo->right_fork);
+		print_action(philo, "has taken a fork");
+		pthread_mutex_lock(philo->left_fork);
+		print_action(philo, "has taken a fork");
+	}
+	else
+	{
+		pthread_mutex_lock(philo->left_fork);
+		print_action(philo, "has taken a fork");
+		pthread_mutex_lock(philo->right_fork);
+		print_action(philo, "has taken a fork");
+	}
 }
+// wt = wait_time
 
-void pick_up_forks(t_philosopher *philo)
+void	pick_up_forks(t_philosopher *philo)
 {
-    int next_philo_id;
-    int prev_philo_id;
-    int wait_time;
-    const int max_wait_time = 4200;
+	int			next_id;
+	int			prev_id;
+	int			wt;
 
-    next_philo_id = get_next_philosopher_id(philo);
-    prev_philo_id = get_previous_philosopher_id(philo);
-    wait_time = 0;
-    while (1)
-    {
-        if (is_neighbor_hungrier(philo, next_philo_id, prev_philo_id) && wait_time < max_wait_time)
-        {
-            usleep(420);
-            wait_time += 420;
-        }
-        else
-        {
-            lock_forks(philo);
-            break;
-        }
-    }
+	next_id = get_next_philosopher_id(philo);
+	prev_id = get_previous_philosopher_id(philo);
+	wt = 0;
+	while (1)
+	{
+		if (is_neighbor_hungrier(philo, next_id, prev_id))
+			usleep(420);
+		else
+		{
+			lock_forks(philo);
+			break ;
+		}
+	}
 }
